@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #endif
 #include <v8.h>
-
+#include <nan.h>
 using namespace v8;
 
 void Pipe(const FunctionCallbackInfo<Value>& args);
@@ -36,15 +36,17 @@ void Pipe(const FunctionCallbackInfo<Value>& args) {
         args.GetReturnValue().Set(Undefined(isolate));
         return;
     }
-    Handle<Array> array = Array::New(isolate, 2);
-    array->Set(0,Integer::New(isolate,pipefd[0]));
-    array->Set(1,Integer::New(isolate,pipefd[1]));
+    Local<Array> array = Array::New(isolate, 2);
+    Nan::Set(array, 0,Integer::New(isolate,pipefd[0]));
+    Nan::Set(array, 1,Integer::New(isolate,pipefd[1]));
     args.GetReturnValue().Set(array);
 #endif
 }
 
-void init(Handle<Object> exports) {
+
+void Initialize(Local<Object> exports) {
     NODE_SET_METHOD(exports, "pipe", Pipe);
 }
 
-NODE_MODULE(posix, init)
+NODE_MODULE(NODE_GYP_MODULE_NAME, Initialize)
+
