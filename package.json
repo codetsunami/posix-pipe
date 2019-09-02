@@ -1,22 +1,32 @@
 {
-  "name": "posix-pipe",
-  "version": "0.1.5",
-  "description": "Posix Pipe",
+  "name": "posix-pipe-fork-exec",
+  "version": "1.0.0",
+  "description": "Posix Pipe Fork Exec, a library for handling hot pocket connections",
   "repository": {
     "type": "git",
     "url": "https://github.com/codetsunami/posix-pipe"
   },
   "keywords": [
     "posix",
-    "pipe"
+    "pipe",
+    "fork",
+    "exec"
   ],
-  "author": "Yury Popov <github@phoenix.dj>",
+  "contributors": [
+    "Richard Holland <richard.holland@starstone.co.nz>",
+    "Yury Popov <github@phoenix.dj>"
+  ],
   "license": "MIT",
   "maintainers": [
     {
       "name": "Yury Popov",
       "url": "https://github.com/djphoenix",
       "email": "github@phoenix.dj"
+    },
+    {
+      "name": "Richard Holland",
+      "url": "https://github.com/codetsunami",
+      "email": "richard.holland@starstone.co.nz"
     }
   ],
   "devDependencies": {
