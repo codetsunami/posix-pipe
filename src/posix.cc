@@ -26,16 +26,6 @@ void Pipe(const FunctionCallbackInfo<Value>& args) {
         args.GetReturnValue().Set(Undefined(isolate));
         return;
     }
-    ret = fcntl(pipefd[0], F_SETFD, FD_CLOEXEC);
-    if (ret == -1) {
-        args.GetReturnValue().Set(Undefined(isolate));
-        return;
-    }
-    ret = fcntl(pipefd[1], F_SETFD, FD_CLOEXEC);
-    if (ret == -1) {
-        args.GetReturnValue().Set(Undefined(isolate));
-        return;
-    }
     Local<Array> array = Array::New(isolate, 2);
     Nan::Set(array, 0,Integer::New(isolate,pipefd[0]));
     Nan::Set(array, 1,Integer::New(isolate,pipefd[1]));
