@@ -4,7 +4,7 @@
   "description": "Posix Pipe Fork Exec, a library for handling hot pocket connections",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codetsunami/posix-pipe"
+    "url": "https://github.com/codetsunami/posix-pipe-fork-exec"
   },
   "keywords": [
     "posix",
