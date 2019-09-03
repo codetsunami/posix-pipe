@@ -15,6 +15,7 @@
 
 using namespace v8;
 
+
 void Pipe(const FunctionCallbackInfo<Value>& args);
 
 void Pipe(const FunctionCallbackInfo<Value>& args) {
@@ -42,7 +43,8 @@ void Pipe(const FunctionCallbackInfo<Value>& args) {
   RawForkExecClose(
   int[] childfds,  // to be closed in the parent branch 
   int[] parentfds, // to be clsoed in the child branch
-  String[] exec    // exec binary in exec[0] pass args exec[>0]
+  String[] exec    // exec binary in exec[0] pass args exec[>0],
+  String input_data // data to feed into stdin of the child
   )
  **/
 void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
@@ -51,27 +53,72 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(Undefined(isolate));
 #else
 
-    if (args.Length() != 3 ||
+    if (args.Length() != 4 ||
             !args[0]->IsArray() ||
             !args[1]->IsArray() ||
-            !args[2]->IsArray()
+            !args[2]->IsArray() ||
+            !args[3]->IsString()
        ) {
         args.GetReturnValue().Set(Undefined(isolate));
         return;
     }
 
+    // set up two additional pipes to redirect input and output from the child
+
+    int child_to_parent[2];
+    int parent_to_child[2];
+
+    if (!pipe(child_to_parent) && !pipe(parent_to_child)) {
+        // child_to_parent[0] = childread
+        // child_to_parent[1] = parentwrite
+        // parent_to_child[0] = parentread
+        // parent_to_child[1] = childwrite
+    }
 
     int pid = fork();
     if (pid) {
         // parent
+        close(child_to_parent[0]);
+        close(parent_to_child[1]);
+
+
         Local<Array> childfds = Local<Array>::Cast(args[0]);
         int count = childfds->Length();
         for (int i = 0; i < count; ++i) {
             int fd = (int)Nan::Get(childfds, i).ToLocalChecked().As<Number>()->Value();
             close(fd);
         }
+
+        FILE* childinp = fdopen(child_to_parent[1], "wb");
+        fprintf(childinp, "%s", *Nan::Utf8String(args[3]));
+        fflush(childinp);
+        fclose(childinp);
+
+        FILE* childout = fdopen(parent_to_child[0], "rb");
+        std::string output;
+        char buffer[1024];
+        int status = 0;
+        waitpid(pid, &status, 0);
+ 
+        while (fgets(buffer, 1023, childout)) {
+            buffer[1023] = '\0';
+            output += std::string(buffer);
+        }
+
+        args.GetReturnValue().Set(String::NewFromUtf8(
+            isolate, output.c_str(), NewStringType::kNormal).ToLocalChecked());
+
     } else {
         // child
+        close(child_to_parent[1]);
+        close(parent_to_child[0]);
+
+        dup2(child_to_parent[0], 0);
+        dup2(parent_to_child[1], 1);
+        
+        close(child_to_parent[0]);
+        close(parent_to_child[1]);
+
         Local<Array> parentfds = Local<Array>::Cast(args[1]);
         int count = parentfds->Length();
         for (int i = 0; i < count; ++i) {
@@ -97,7 +144,6 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         printf("ERROR: %d\n", errno);    
     }
 
-    args.GetReturnValue().Set(Integer::New(isolate, pid));
 #endif    
 }
 

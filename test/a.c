@@ -5,6 +5,8 @@
 
 int main(int argc, char** argv) {
 
+   
+
     FILE* dbg = fopen("aoutran", "w+");
 
     fprintf(stderr, "%s ran\n", argv[0]);
@@ -40,5 +42,8 @@ int main(int argc, char** argv) {
     fclose(fw);
 
     fclose(dbg);
+   
+    printf("\n");
+    fflush(stdout);
     return 0;
 }

@@ -18,8 +18,7 @@ rl.on('line', (line) => {
   console.log(`Received: ${line}`);
 });
 
-parentsockets[1].write("test msg\n")
-var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/a.out', ''+(pipes.childread), '' + (pipes.childwrite)], " ")
+var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/b.out', '3', '4'], "bcdefg")
 
 console.log("pid = " + pid)
 
