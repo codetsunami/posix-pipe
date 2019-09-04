@@ -45,6 +45,7 @@ void Pipe(const FunctionCallbackInfo<Value>& args) {
   int[] parentfds, // to be clsoed in the child branch
   String[] exec    // exec binary in exec[0] pass args exec[>0],
   String input_data // data to feed into stdin of the child
+  String working_directory // the working directory the child should operate under
   )
  **/
 void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
@@ -53,11 +54,12 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(Undefined(isolate));
 #else
 
-    if (args.Length() != 4 ||
+    if (args.Length() != 5 ||
             !args[0]->IsArray() ||
             !args[1]->IsArray() ||
             !args[2]->IsArray() ||
-            !args[3]->IsString()
+            !args[3]->IsString() ||
+            !args[4]->IsString()
        ) {
         args.GetReturnValue().Set(Undefined(isolate));
         return;
@@ -118,6 +120,8 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         
         close(child_to_parent[0]);
         close(parent_to_child[1]);
+
+        chdir(*Nan::Utf8String(args[3]));
 
         Local<Array> parentfds = Local<Array>::Cast(args[1]);
         int count = parentfds->Length();

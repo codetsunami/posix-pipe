@@ -18,7 +18,7 @@ rl.on('line', (line) => {
   console.log(`Received: ${line}`);
 });
 
-var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/b.out', '3', '4'], "bcdefg")
+var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/b.out', '3', '4'], "bcdefg", ".")
 
 console.log("pid = " + pid)
 

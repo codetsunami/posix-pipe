@@ -38,11 +38,12 @@ parentsockets[1].write("test msg\n")
 
 // run a fork exec on the specified binary
 // this will close specified child pipes on the parent side of the fork and
-// specified parent pipes on the child side of the fork in addition the final
+// specified parent pipes on the child side of the fork in addition the 2nd last
 // string parameter will be fed into stdin of the child and stdout will be
-// collected and returned as a result of the function call
+// collected and returned as a result of the function call. last parameter is
+// the executables working directory relative to the parents working dir.
 // this call is blocking
-var output = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/a.out', ''+(pipes.childread), '' + (pipes.childwrite)], "")
+var output = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/a.out', ''+(pipes.childread), '' + (pipes.childwrite)], "", ".")
 
 console.log("child ran, here's the output: \n" + output)
 ```

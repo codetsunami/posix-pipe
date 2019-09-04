@@ -19,7 +19,7 @@ rl.on('line', (line) => {
 });
 
 parentsockets[1].write("test msg\n")
-var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/a.out', ''+(pipes.childread), '' + (pipes.childwrite)], " ")
+var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/a.out', ''+(pipes.childread), '' + (pipes.childwrite)], "", ".")
 
 console.log("pid = " + pid)
 
