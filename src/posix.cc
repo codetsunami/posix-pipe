@@ -121,7 +121,7 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         close(child_to_parent[0]);
         close(parent_to_child[1]);
 
-        chdir(*Nan::Utf8String(args[3]));
+        chdir(*Nan::Utf8String(args[4]));
 
         Local<Array> parentfds = Local<Array>::Cast(args[1]);
         int count = parentfds->Length();
