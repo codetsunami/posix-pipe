@@ -18,7 +18,19 @@ rl.on('line', (line) => {
   console.log(`Received: ${line}`);
 });
 
-var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/b.out', '3', '4'], "bcdefg", ".")
+var a = new Uint8Array(7)
+var s = 'hello'
+for (var i = 0 ; i < s.length; ++i)
+    a[i] = s.charCodeAt(i)-1
+
+a[5] = 10;
+a[6] = 0;
+
+//var input = 'bcdefg';
+
+var input = a;
+
+var pid = pipe.rawforkexecclose(childpipes, parentpipes, ['./test/b.out', '3', '4'], input, ".")
 
 console.log("pid = " + pid)
 

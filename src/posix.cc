@@ -58,7 +58,7 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
             !args[0]->IsArray() ||
             !args[1]->IsArray() ||
             !args[2]->IsArray() ||
-            !args[3]->IsString() ||
+            !(args[3]->IsString() || args[3]->IsUint8Array()) ||
             !args[4]->IsString()
        ) {
         args.GetReturnValue().Set(Undefined(isolate));
@@ -92,7 +92,16 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         }
 
         FILE* childinp = fdopen(child_to_parent[1], "wb");
-        fprintf(childinp, "%s", *Nan::Utf8String(args[3]));
+        if (args[3]->IsString()) {
+            fprintf(childinp, "%s", *Nan::Utf8String(args[3]));
+        } else {
+            Local<Uint8Array> input = args[3].As<Uint8Array>();
+            char* data = (char*)(input->Buffer()->GetContents().Data());
+            int len = input->Length();
+            
+            //fwrite(data, 1, len, childinp);*/
+            fprintf(childinp, "%s", data);
+        }
         fflush(childinp);
         fclose(childinp);
 
