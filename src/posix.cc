@@ -98,9 +98,7 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
             Local<Uint8Array> input = args[3].As<Uint8Array>();
             char* data = (char*)(input->Buffer()->GetContents().Data());
             int len = input->Length();
-            
-            //fwrite(data, 1, len, childinp);*/
-            fprintf(childinp, "%s", data);
+            fwrite(data, 1, len, childinp);
         }
         fflush(childinp);
         fclose(childinp);
@@ -148,7 +146,6 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
             char* x = *Nan::Utf8String(Nan::Get(execargv, i).ToLocalChecked());
             eargv[i] = (char*)malloc(strlen(x));
             strcpy(eargv[i], x);
-            //printf("%s\n", eargv[i]);
         } 
 
         eargv[count] = 0;
