@@ -2,6 +2,7 @@
 #define WIN
 #endif
 
+#include <sys/ioctl.h>
 #include <node.h>
 #ifdef WIN
 #include <process.h>
@@ -35,6 +36,44 @@ void Pipe(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(array);
 #endif
 }
+
+/**
+    Helper function for non-blocking reads.
+    Given an FD check if any bytes are available and return them as a
+    Uint8Array if they are available
+ 
+    GetFdBytes(fd)
+**/
+void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
+    Isolate* isolate = args.GetIsolate();
+#ifdef WIN
+    args.GetReturnValue().Set(Undefined(isolate));
+#else
+
+    if (args.Length() != 1) {
+        args.GetReturnValue().Set(Undefined(isolate));
+        return;
+    }     
+
+    int fd = (int)(args[0].As<Number>()->Value());
+ 
+    int bytes_available = 0;
+    ioctl(fd, FIONREAD, &bytes_available);
+
+    if (bytes_available > 0) {
+        Local<ArrayBuffer> abuf = ArrayBuffer::New(isolate, bytes_available);
+        char* data = (char*)(abuf->GetContents().Data());
+        read(fd, data, bytes_available);
+        args.GetReturnValue().Set(abuf);
+        return; 
+    }
+
+    args.GetReturnValue().Set(Undefined(isolate));
+    return;
+
+#endif
+}
+
 
 
 /**
@@ -160,6 +199,7 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
 void Initialize(Local<Object> exports) {
     NODE_SET_METHOD(exports, "rawforkexecclose", RawForkExecClose);
     NODE_SET_METHOD(exports, "pipe", Pipe);
+    NODE_SET_METHOD(exports, "getfdbytes", GetFdBytes);
 }
 
 NODE_MODULE(NODE_GYP_MODULE_NAME, Initialize)
