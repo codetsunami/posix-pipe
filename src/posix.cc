@@ -66,9 +66,10 @@ void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
         read(fd, data, bytes_available);
         args.GetReturnValue().Set(abuf);
         return; 
-    }
+    } 
 
-    args.GetReturnValue().Set(Undefined(isolate));
+    Local<ArrayBuffer> abuf = ArrayBuffer::New(isolate, 0);
+    args.GetReturnValue().Set(abuf);
     return;
 
 #endif
