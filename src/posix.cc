@@ -154,6 +154,8 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
             output += std::string(buffer);
         }
 
+        fclose(childout);
+
         args.GetReturnValue().Set(String::NewFromUtf8(
             isolate, output.c_str(), NewStringType::kNormal).ToLocalChecked());
 
