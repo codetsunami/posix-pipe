@@ -154,10 +154,6 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
             output += std::string(buffer);
         }
 
-        close(child_to_parent[1]);
-        close(parent_to_child[0]);
-
-
         args.GetReturnValue().Set(String::NewFromUtf8(
             isolate, output.c_str(), NewStringType::kNormal).ToLocalChecked());
 
