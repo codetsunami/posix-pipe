@@ -41,25 +41,12 @@ void Pipe(const FunctionCallbackInfo<Value>& args) {
 #endif
 }
 
-/**
-    Helper function for non-blocking reads.
-    Given an FD check if any bytes are available and return them as a
-    Uint8Array if they are available
- 
-    GetFdBytes(fd)
-**/
-void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
+void _GetFdBytes(int fd, const FunctionCallbackInfo<Value>& args) {
+
     Isolate* isolate = args.GetIsolate();
 #ifdef WIN
     args.GetReturnValue().Set(Undefined(isolate));
 #else
-
-    if (args.Length() != 1) {
-        args.GetReturnValue().Set(Undefined(isolate));
-        return;
-    }     
-
-    int fd = (int)(args[0].As<Number>()->Value());
  
     int bytes_available = 0;
     ioctl(fd, FIONREAD, &bytes_available);
@@ -77,26 +64,31 @@ void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
     return;
 
 #endif
+
+}
+
+
+/**
+    Helper function for non-blocking reads.
+    Given an FD check if any bytes are available and return them as a
+    Uint8Array if they are available
+ 
+    GetFdBytes(fd)
+**/
+void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
+    if (args.Length() != 1) {
+        args.GetReturnValue().Set(Undefined(args.GetIsolate()));
+        return;
+    }     
+    int fd = (int)(args[0].As<Number>()->Value());
+
+    _GetFdBytes(fd, args);
+    return;
 }
 
 
 // helper function to hoover up any stdout and set args return value to it
 void CollectOutput(int fd, const FunctionCallbackInfo<Value>& args) {
-        
-    FILE* childout = fdopen(fd, "rb");
-    std::string output;
-    char buffer[1024];
-
-    while (fgets(buffer, 1023, childout)) {
-        buffer[1023] = '\0';
-        output += std::string(buffer);
-    }
-
-    fclose(childout);
-
-    args.GetReturnValue().Set(String::NewFromUtf8(
-        args.GetIsolate(), output.c_str(), NewStringType::kNormal).ToLocalChecked());
-
 }
 
 /**
@@ -175,7 +167,8 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         reentry_pid_map.erase(pid);
 
         // now collect output, and store it in the args return val
-        CollectOutput(parent_to_child[0], args);
+        _GetFdBytes(parent_to_child[0], args);
+        close(parent_to_child[0]);
 
         // we're done!
         return;
@@ -235,8 +228,9 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
 
         waitpid(pid, &status, 0);
 
-        CollectOutput(parent_to_child[0], args);
-
+        _GetFdBytes(parent_to_child[0], args);
+        close(parent_to_child[0]);
+        
         return;
 
     } else {
