@@ -15,6 +15,9 @@
 #include <iostream>
 #include <sys/types.h>
 #include <sys/wait.h>
+
+#include <map>
+
 using namespace v8;
 
 
@@ -77,6 +80,24 @@ void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
 }
 
 
+// helper function to hoover up any stdout and set args return value to it
+void CollectOutput(int fd, const FunctionCallbackInfo<Value>& args) {
+        
+    FILE* childout = fdopen(fd, "rb");
+    std::string output;
+    char buffer[1024];
+
+    while (fgets(buffer, 1023, childout)) {
+        buffer[1023] = '\0';
+        output += std::string(buffer);
+    }
+
+    fclose(childout);
+
+    args.GetReturnValue().Set(String::NewFromUtf8(
+        args.GetIsolate(), output.c_str(), NewStringType::kNormal).ToLocalChecked());
+
+}
 
 /**
   Fork, then exec, then close appropriate FDs based on fork side
@@ -87,6 +108,15 @@ void GetFdBytes(const FunctionCallbackInfo<Value>& args) {
   String[] exec    // exec binary in exec[0] pass args exec[>0],
   String input_data // data to feed into stdin of the child
   String working_directory // the working directory the child should operate under
+  int reentrant_pid // optional 
+       
+        reentrant_pid if specified can be 0 or a pid
+        if it is 0 then the function will fork and exec returning the pid of the child immediately
+        to harvest the output of the child you will need to call the function again with this pid
+        if the child has not yet ended the function will return the same pid again
+        if the child has exited then the function will return a string containing its stdout
+        this complicated scheme is to allow single threaded applications to poll the status
+        of their children rather than maintain a blocking call
   )
  **/
 void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
@@ -95,7 +125,7 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(Undefined(isolate));
 #else
 
-    if (args.Length() != 5 ||
+    if (args.Length() < 5 ||
             !args[0]->IsArray() ||
             !args[1]->IsArray() ||
             !args[2]->IsArray() ||
@@ -106,10 +136,50 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         return;
     }
 
-    // set up two additional pipes to redirect input and output from the child
+    int reentrant = ( args.Length() == 6 );
+    int reentry_pid =  ( reentrant ? args[5].As<Number>()->Value() : 0 );
 
+    int status = 0;
+    int pid = -1;
+
+    // this is a map for re-entrant calls
+    // pid -> parentread of child process
+    static std::map<int, int> reentry_pid_map;
+
+    // set up two additional pipes to redirect input and output from the child
     int child_to_parent[2];
     int parent_to_child[2];
+
+    if (reentrant && reentry_pid) {
+
+        pid = reentry_pid;
+
+        if (reentry_pid_map.find(pid) == reentry_pid_map.end()) {
+            args.GetReturnValue().Set(Undefined(isolate));
+            return;
+        }
+
+        parent_to_child[0] = reentry_pid_map[pid];
+        child_to_parent[1] = -1;
+        parent_to_child[1] = -1;
+        child_to_parent[0] = -1;
+
+        if (!waitpid(pid, &status, WNOHANG)) {
+            args.GetReturnValue().Set(Integer::New(isolate, pid));
+            return;
+        } 
+
+        // execution to here means the process is actually finished, so collect and return output 
+        
+        // first clean up the map
+        reentry_pid_map.erase(pid);
+
+        // now collect output, and store it in the args return val
+        CollectOutput(parent_to_child[0], args);
+
+        // we're done!
+        return;
+    } 
 
     if (!pipe(child_to_parent) && !pipe(parent_to_child)) {
         // child_to_parent[0] = childread
@@ -118,11 +188,20 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         // parent_to_child[1] = childwrite
     }
 
-    int pid = fork();
+    //todo: place an error if pipes don't fire
+   
+
+    pid = fork();
+    
     if (pid) {
         // parent
         close(child_to_parent[0]);
         close(parent_to_child[1]);
+
+        // if the function is being called as reentrant then
+        // store the parent ends of the pipe for next call
+        if (reentrant) 
+            reentry_pid_map[pid] = parent_to_child[0];
 
 
         Local<Array> childfds = Local<Array>::Cast(args[0]);
@@ -144,21 +223,21 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
         fflush(childinp);
         fclose(childinp);
 
-        FILE* childout = fdopen(parent_to_child[0], "rb");
-        std::string output;
-        char buffer[1024];
-        int status = 0;
-        waitpid(pid, &status, 0);
- 
-        while (fgets(buffer, 1023, childout)) {
-            buffer[1023] = '\0';
-            output += std::string(buffer);
+        // if the function is being called as reentrant we will always return here
+        // the user will need to make a second call to collect output!
+        if (reentrant) {
+            // return the pid
+            args.GetReturnValue().Set(Integer::New(isolate, pid));
+            return;            
         }
+            
+        // execution to here means this is a blocking call, not a reentrant call
 
-        fclose(childout);
+        waitpid(pid, &status, 0);
 
-        args.GetReturnValue().Set(String::NewFromUtf8(
-            isolate, output.c_str(), NewStringType::kNormal).ToLocalChecked());
+        CollectOutput(parent_to_child[0], args);
+
+        return;
 
     } else {
         // child
@@ -195,6 +274,8 @@ void RawForkExecClose(const FunctionCallbackInfo<Value>& args) {
 
         execv(eargv[0], eargv);
         printf("ERROR: %d\n", errno);    
+
+        return;
     }
 
 #endif    

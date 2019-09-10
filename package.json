@@ -1,6 +1,6 @@
 {
   "name": "posix-pipe-fork-exec",
-  "version": "1.1.8",
+  "version": "1.2.0",
   "description": "Posix Pipe Fork Exec, a library for handling hot pocket connections",
   "repository": {
     "type": "git",
