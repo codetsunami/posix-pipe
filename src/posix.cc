@@ -13,7 +13,8 @@
 #include <v8.h>
 #include <nan.h>
 #include <iostream>
-
+#include <sys/types.h>
+#include <sys/wait.h>
 using namespace v8;
 
 
